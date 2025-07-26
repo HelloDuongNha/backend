@@ -44,5 +44,5 @@ tagRouter(app);
 
 // 7. run server
 app.listen(process.env.PORT || 3001, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+    console.log(`Server is running on http://localhost:`);
 });
