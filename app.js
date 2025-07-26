@@ -26,7 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // 4. declare & config mongoose (to connect to MongoDB)
 const mongoose = require('mongoose');
-const databaseURL = 'mongodb://localhost:27017/note_db'; // replace with your MongoDB URL
+const databaseURL = 'mongodb+srv://hoangduongbi6th:ev80pMUUS3UyXwoQ@cluster0.bxnwaex.mongodb.net/note_db'; // replace with your MongoDB URL
 mongoose.connect(databaseURL)
 .then(() => console.log('Connected to MongoDB successfully'))
 .catch((error) => console.error('Error connecting to MongoDB:', error));
@@ -40,7 +40,7 @@ const tagRouter = require('./api/routes/tagRoute');
 tagRouter(app);
 
 // 6. declare & register port
-const port = 3000;
+const port = 3001;
 
 // 7. run server
 app.listen(port, () => {
