@@ -10,6 +10,19 @@ const userRoute = (app) => {
     app.route('/api/users/login')
         .post(userController.loginUser);      // login user
     
+    // OTP routes
+    app.route('/api/users/send-otp')
+        .post(userController.sendOtp);        // send OTP to email
+    
+    app.route('/api/users/verify-otp')
+        .post(userController.verifyOtp);      // verify OTP
+    
+    app.route('/api/users/reset-password')
+        .post(userController.resetPassword);  // reset password using OTP
+    
+    app.route('/api/users/complete-registration')
+        .post(userController.completeRegistration); // complete registration with OTP
+    
     // Search route
     app.route('/api/users/search')
         .get(userController.searchUsers);     // search users by email or name
