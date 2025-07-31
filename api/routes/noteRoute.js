@@ -2,47 +2,45 @@ const express = require('express');
 const router = express.Router();
 const noteController = require('../controllers/noteController');
 
-// 1. import controller
+// Define note routes for Express app
 const noteRoute = (app) => {
-    // Base API routes for notes
+    // Basic CRUD operations
     app.route('/api/notes')
-        .get(noteController.viewAllNotes)   // get all notes
-        .post(noteController.createNote)    // create a new note
-        .delete(noteController.deleteAllNotes); // delete all notes
+        .get(noteController.viewAllNotes)   // Get all notes
+        .post(noteController.createNote)     // Create a new note
+        .delete(noteController.deleteAllNotes); // Delete all notes (admin function)
 
-    // Route for getting notes by user
+    // User-specific note routes
     app.route('/api/notes/user')
-        .get(noteController.getNotesByUser); // get all notes for a user with optional filters
+        .get(noteController.getNotesByUser); // Get user notes with optional filters
 
-    // Route for getting trashed notes by user
+    // Trash management routes
     app.route('/api/notes/trash')
-        .get(noteController.getTrashedNotesByUser); // get all trashed notes for a user
+        .get(noteController.getTrashedNotesByUser); // Get user's trashed notes
         
-    // Route for searching trashed notes
     app.route('/api/notes/trash/search')
-        .get(noteController.searchTrashedNotes); // search trashed notes for a user
+        .get(noteController.searchTrashedNotes); // Search in trashed notes
 
-    // Search route for notes
+    // Search functionality
     app.route('/api/notes/search')
-        .get(noteController.searchNotes);    // search/filter notes
+        .get(noteController.searchNotes);    // Search/filter notes
 
-    // API routes for a specific note by ID
+    // Individual note operations by ID
     app.route('/api/notes/:id')
-        .get(noteController.getNoteById)     // get a note by ID
-        .put(noteController.updateNoteById)  // update a note by ID
-        .delete(noteController.deleteNoteById);  // delete a note by ID
+        .get(noteController.getNoteById)     // Get a note by ID
+        .put(noteController.updateNoteById)  // Update a note by ID
+        .delete(noteController.deleteNoteById);  // Delete a note permanently
     
-    // Trash operations routes
+    // Trash operations
     app.route('/api/notes/:id/trash')
-        .put(noteController.moveNoteToTrash); // move note to trash
+        .put(noteController.moveNoteToTrash); // Move note to trash
     
     app.route('/api/notes/:id/restore')
-        .put(noteController.restoreNoteFromTrash); // restore note from trash
+        .put(noteController.restoreNoteFromTrash); // Restore note from trash
     
-    // Toggle done status route
+    // Task management
     app.route('/api/notes/:id/done')
-        .patch(noteController.toggleNoteDoneById); // toggle or set the done status
+        .patch(noteController.toggleNoteDoneById); // Toggle note's done status
 }
 
-// 3. export the route to use in other files
 module.exports = noteRoute;

@@ -1,50 +1,66 @@
-// 1. import controller
+// Import controller
 const userController = require('../controllers/userController');
 
-// 2. declare endpoints with API methods & controller functions
+// Define all routes for Express app
 const userRoute = (app) => {
-    // Auth routes
+    // Authentication routes
     app.route('/api/users/register')
-        .post(userController.registerUser);   // register a new user
+        .post(userController.initiateRegister);   // Start registration with email
+
+    app.route('/api/users/verify-register')
+        .post(userController.verifyRegisterOTP);  // Verify OTP and complete registration
+    
+    app.route('/api/users/resend-otp')
+        .post(userController.resendRegisterOTP);  // Resend OTP for registration
     
     app.route('/api/users/login')
-        .post(userController.loginUser);      // login user
+        .post(userController.loginUser);          // User login
     
-    // OTP routes
-    app.route('/api/users/send-otp')
-        .post(userController.sendOtp);        // send OTP to email
+    app.route('/api/users/verify-email')
+        .post(userController.verifyEmail);        // Verify email with OTP
     
-    app.route('/api/users/verify-otp')
-        .post(userController.verifyOtp);      // verify OTP
+    app.route('/api/users/forgot-password')
+        .post(userController.initiateForgotPassword);  // Send OTP for password reset
     
     app.route('/api/users/reset-password')
-        .post(userController.resetPassword);  // reset password using OTP
+        .post(userController.resetPasswordWithOTP);    // Reset password with OTP
     
-    app.route('/api/users/complete-registration')
-        .post(userController.completeRegistration); // complete registration with OTP
+    // Email change process
+    app.route('/api/users/initiate-email-change')
+        .post(userController.initiateEmailChange); // Send OTP for email change
     
-    // Search route
+    app.route('/api/users/verify-email-change')
+        .post(userController.verifyEmailChange);  // Verify email change with OTP
+    
+    // Email notifications
+    app.route('/api/users/send-notification')
+        .post(userController.sendNotificationEmail); // Send notification emails
+    
+    // User search functionality
     app.route('/api/users/search')
-        .get(userController.searchUsers);     // search users by email or name
+        .get(userController.searchUsers);     // Search users by email or name
     
-    // Users list route
+    // User management (admin)
     app.route('/api/users')
-        .get(userController.getAllUsers);     // get all users (for admin)
+        .get(userController.getAllUsers);     // Get all users (admin only)
     
-    // User by ID routes
+    // User operations by ID
     app.route('/api/users/:id')
-        .get(userController.getUserById)      // get user by ID
-        .put(userController.updateUserById)   // update user by ID
-        .delete(userController.deleteUserById); // delete user by ID
+        .get(userController.getUserById)      // Get specific user
+        .put(userController.updateUserById)   // Update user info
+        .delete(userController.deleteUserById); // Delete user account
     
-    // Password change route
+    // User password management
     app.route('/api/users/:id/password')
-        .patch(userController.changePasswordById); // change user password
+        .patch(userController.changePasswordById); // Change password
     
-    // Role update route
-    app.route('/api/users/:id/role')
-        .patch(userController.updateUserRoleById); // change user role
+    // User role management
+    // app.route('/api/users/:id/role')
+    //     .patch(userController.updateUserRoleById); // Change user role
+        
+    // User analytics
+    app.route('/api/users/:id/stats')
+        .get(userController.getUserStats); // Get user statistics
 };
 
-// 3. export the route to use in other files
 module.exports = userRoute;

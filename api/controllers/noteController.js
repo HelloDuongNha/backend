@@ -1,16 +1,17 @@
-// Import model
+// Import models
 const Note = require('../models/noteModel');
 const Tag = require('../models/tagModel');
 const mongoose = require('mongoose');
 
-// Validate tag IDs
+// Helper for tag validation
 const validateTagIds = (tagIds) => {
     if (!tagIds || !Array.isArray(tagIds)) return false;
-    
     return tagIds.every(tagId => mongoose.Types.ObjectId.isValid(tagId));
 };
 
-// Controller functions with async/await and try/catch for error handling
+// CRUD OPERATIONS FOR NOTES
+
+// Create a new note with tags validation
 const createNote = async (req, res) => {
     try {
         const { tags, userId, ...noteData } = req.body;
@@ -21,12 +22,9 @@ const createNote = async (req, res) => {
                 return res.status(400).send('Invalid tag ID format in tags array');
             }
             
-            // Verify all tags exist and belong to the user
+            // Verify tags exist and belong to the user
             if (tags.length > 0) {
-                const foundTags = await Tag.find({
-                    _id: { $in: tags },
-                    userId
-                });
+                const foundTags = await Tag.find({ _id: { $in: tags }, userId });
                 
                 if (foundTags.length !== tags.length) {
                     return res.status(400).send('One or more tags not found or do not belong to this user');
@@ -34,16 +32,14 @@ const createNote = async (req, res) => {
             }
         }
         
-        // Create note with validated data
-        const newNote = new Note({
+        // Create note - CHANGE: Use Model.create() instead of new Model().save()
+        const savedNote = await Note.create({
             ...noteData,
             userId,
             tags: tags || []
         });
         
-        const savedNote = await newNote.save();
-        
-        // Populate tags in the response
+        // Get populated note
         const populatedNote = await Note.findById(savedNote._id).populate('tags');
         res.status(201).json(populatedNote);
     } catch (error) {
@@ -51,17 +47,18 @@ const createNote = async (req, res) => {
     }
 };
 
+// Get all non-trashed notes
 const viewAllNotes = async (req, res) => {
     try {
-        const notes = await Note.find({ trashed: false })
-            .populate('tags')
-            .sort({ updatedAt: -1 });
+        // CHANGE: Separate find() and sort() calls
+        const notes = await Note.find({ trashed: false }).populate('tags').sort({ updatedAt: -1 });
         res.status(200).json(notes);
     } catch (error) {
         res.status(500).send(error.message);
     }
 };
 
+// Get notes by user with filters
 const getNotesByUser = async (req, res) => {
     try {
         const { userId, tagId, done, search } = req.query;
@@ -70,10 +67,9 @@ const getNotesByUser = async (req, res) => {
             return res.status(400).send('userId is required');
         }
         
-        // Base query
+        // Build query with filters
         const query = { userId, trashed: false };
         
-        // Add optional filters if provided
         if (tagId) {
             if (!mongoose.Types.ObjectId.isValid(tagId)) {
                 return res.status(400).send('Invalid tag ID format');
@@ -86,38 +82,22 @@ const getNotesByUser = async (req, res) => {
         }
         
         if (search) {
+            // CHANGE: Use RegExp directly as per the requirements
             query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { content: { $regex: search, $options: 'i' } }
+                { title: new RegExp(search, "i") },
+                { content: new RegExp(search, "i") }
             ];
         }
         
-        const notes = await Note.find(query)
-            .populate('tags')
-            .sort({ updatedAt: -1 });
+        // CHANGE: Separate find() and sort() calls
+        const notes = await Note.find(query).populate('tags').sort({ updatedAt: -1 });
         res.status(200).json(notes);
     } catch (error) {
         res.status(500).send(error.message);
     }
 };
 
-const getTrashedNotesByUser = async (req, res) => {
-    try {
-        const { userId } = req.query;
-        
-        if (!userId) {
-            return res.status(400).send('userId is required');
-        }
-        
-        const notes = await Note.find({ userId, trashed: true })
-            .populate('tags')
-            .sort({ updatedAt: -1 });
-        res.status(200).json(notes);
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-};
-
+// Get a note by ID
 const getNoteById = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -136,6 +116,7 @@ const getNoteById = async (req, res) => {
     }
 };
 
+// Update a note with tag validation
 const updateNoteById = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -144,18 +125,15 @@ const updateNoteById = async (req, res) => {
         
         const { tags, userId, ...updateData } = req.body;
         
-        // If tags are provided, validate them
+        // Validate tags if provided
         if (tags) {
             if (!validateTagIds(tags)) {
                 return res.status(400).send('Invalid tag ID format in tags array');
             }
             
-            // Verify all tags exist and belong to the user
+            // Verify tags exist and belong to user
             if (tags.length > 0 && userId) {
-                const foundTags = await Tag.find({
-                    _id: { $in: tags },
-                    userId
-                });
+                const foundTags = await Tag.find({ _id: { $in: tags }, userId });
                 
                 if (foundTags.length !== tags.length) {
                     return res.status(400).send('One or more tags not found or do not belong to this user');
@@ -165,11 +143,11 @@ const updateNoteById = async (req, res) => {
             updateData.tags = tags;
         }
         
-        // Update note with validated data
+        // CHANGE: Use findByIdAndUpdate as specified
         const updatedNote = await Note.findByIdAndUpdate(
             req.params.id,
             updateData,
-            { new: true, runValidators: true }
+            { new: true }
         ).populate('tags');
         
         if (!updatedNote) {
@@ -182,12 +160,47 @@ const updateNoteById = async (req, res) => {
     }
 };
 
+// Delete all notes (admin function)
+const deleteAllNotes = async (req, res) => {
+    try {
+        // CHANGE: Use deleteMany as specified
+        await Note.deleteMany();
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+};
+
+// Permanently delete a note
+const deleteNoteById = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).send('Invalid note ID');
+        }
+        
+        // CHANGE: Use findByIdAndDelete as specified
+        const deletedNote = await Note.findByIdAndDelete(req.params.id);
+        
+        if (!deletedNote) {
+            return res.status(404).send('Note not found');
+        }
+        
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+};
+
+// TRASH MANAGEMENT
+
+// Move a note to trash
 const moveNoteToTrash = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).send('Invalid note ID');
         }
         
+        // CHANGE: Use findByIdAndUpdate as specified
         const updatedNote = await Note.findByIdAndUpdate(
             req.params.id,
             { trashed: true },
@@ -204,12 +217,14 @@ const moveNoteToTrash = async (req, res) => {
     }
 };
 
+// Restore a note from trash
 const restoreNoteFromTrash = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).send('Invalid note ID');
         }
         
+        // CHANGE: Use findByIdAndUpdate as specified
         const updatedNote = await Note.findByIdAndUpdate(
             req.params.id,
             { trashed: false },
@@ -226,93 +241,24 @@ const restoreNoteFromTrash = async (req, res) => {
     }
 };
 
-const deleteAllNotes = async (req, res) => {
+// Get all trashed notes for a user
+const getTrashedNotesByUser = async (req, res) => {
     try {
-        await Note.deleteMany();
-        res.status(204).send();
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-};
-
-const deleteNoteById = async (req, res) => {
-    try {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).send('Invalid note ID');
-        }
-        
-        const deletedNote = await Note.findByIdAndDelete(req.params.id);
-        
-        if (!deletedNote) {
-            return res.status(404).send('Note not found');
-        }
-        
-        res.status(204).send();
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-};
-
-const searchNotes = async (req, res) => {
-    try {
-        const { userId, tagId, keyword } = req.query;
+        const { userId } = req.query;
         
         if (!userId) {
             return res.status(400).send('userId is required');
         }
         
-        const query = { userId, trashed: false };
-        
-        if (tagId) {
-            if (!mongoose.Types.ObjectId.isValid(tagId)) {
-                return res.status(400).send('Invalid tag ID format');
-            }
-            query.tags = tagId;
-        }
-        
-        if (keyword) {
-            query.$or = [
-                { title: { $regex: keyword, $options: 'i' } },
-                { content: { $regex: keyword, $options: 'i' } }
-            ];
-        }
-        
-        const notes = await Note.find(query)
-            .populate('tags')
-            .sort({ updatedAt: -1 });
+        // CHANGE: Separate find() and sort() calls
+        const notes = await Note.find({ userId, trashed: true }).populate('tags').sort({ updatedAt: -1 });
         res.status(200).json(notes);
     } catch (error) {
         res.status(500).send(error.message);
     }
 };
 
-const toggleNoteDoneById = async (req, res) => {
-    try {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).send('Invalid note ID');
-        }
-        
-        const note = await Note.findById(req.params.id);
-        
-        if (!note) {
-            return res.status(404).send('Note not found');
-        }
-        
-        // If done status is provided in body, use it; otherwise toggle the current value
-        const doneValue = req.body.done !== undefined ? req.body.done : !note.done;
-        
-        const updatedNote = await Note.findByIdAndUpdate(
-            req.params.id,
-            { done: doneValue },
-            { new: true }
-        ).populate('tags');
-        
-        res.status(200).json(updatedNote);
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-};
-
+// Search in trashed notes
 const searchTrashedNotes = async (req, res) => {
     try {
         const { userId, tagId, keyword } = req.query;
@@ -331,22 +277,90 @@ const searchTrashedNotes = async (req, res) => {
         }
         
         if (keyword) {
+            // CHANGE: Use RegExp directly as per the requirements
             query.$or = [
-                { title: { $regex: keyword, $options: 'i' } },
-                { content: { $regex: keyword, $options: 'i' } }
+                { title: new RegExp(keyword, "i") },
+                { content: new RegExp(keyword, "i") }
             ];
         }
         
-        const notes = await Note.find(query)
-            .populate('tags')
-            .sort({ updatedAt: -1 });
+        // CHANGE: Separate find() and sort() calls
+        const notes = await Note.find(query).populate('tags').sort({ updatedAt: -1 });
         res.status(200).json(notes);
     } catch (error) {
         res.status(500).send(error.message);
     }
 };
 
-// Export controller functions
+// SEARCH AND FILTER FUNCTIONS
+
+// Search notes with filters
+const searchNotes = async (req, res) => {
+    try {
+        const { userId, tagId, keyword } = req.query;
+        
+        if (!userId) {
+            return res.status(400).send('userId is required');
+        }
+        
+        const query = { userId, trashed: false };
+        
+        if (tagId) {
+            if (!mongoose.Types.ObjectId.isValid(tagId)) {
+                return res.status(400).send('Invalid tag ID format');
+            }
+            query.tags = tagId;
+        }
+        
+        if (keyword) {
+            // CHANGE: Use RegExp directly as per the requirements
+            query.$or = [
+                { title: new RegExp(keyword, "i") },
+                { content: new RegExp(keyword, "i") }
+            ];
+        }
+        
+        // CHANGE: Separate find() and sort() calls
+        const notes = await Note.find(query).populate('tags').sort({ updatedAt: -1 });
+        res.status(200).json(notes);
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+};
+
+// OTHER FUNCTIONS
+
+// Toggle done status of a note
+const toggleNoteDoneById = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).send('Invalid note ID');
+        }
+        
+        // CHANGE: Use findById first, then update
+        const note = await Note.findById(req.params.id);
+        
+        if (!note) {
+            return res.status(404).send('Note not found');
+        }
+        
+        // Use provided value or toggle current status
+        const doneValue = req.body.done !== undefined ? req.body.done : !note.done;
+        
+        // CHANGE: Use findByIdAndUpdate as specified
+        const updatedNote = await Note.findByIdAndUpdate(
+            req.params.id,
+            { done: doneValue },
+            { new: true }
+        ).populate('tags');
+        
+        res.status(200).json(updatedNote);
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+};
+
+// Export all controller functions
 module.exports = {
     createNote,
     viewAllNotes,

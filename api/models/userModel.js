@@ -1,7 +1,11 @@
 const mongoose = require('mongoose');
 
-// User schema
-const userSchema = new mongoose.Schema({
+const UserSchema = mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+        trim: true
+    },
     email: {
         type: String,
         required: true,
@@ -11,24 +15,65 @@ const userSchema = new mongoose.Schema({
     },
     passwordHash: {
         type: String,
-        required: true
+        required: true,
     },
     role: {
         type: String,
         enum: ['user', 'admin'],
         default: 'user'
     },
-    name: {
-        type: String
+    isEmailVerified: {
+        type: Boolean,
+        default: false
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
     },
     otp: {
-        code: String,
-        expiresAt: Date
+        code: {
+            type: String
+        },
+        createdAt: {
+            type: Date
+        },
+        expiresAt: {
+            type: Date
+        },
+        verified: {
+            type: Boolean,
+            default: false
+        }
+    },
+    emailChangeOtp: {
+        code: {
+            type: String
+        },
+        newEmail: {
+            type: String
+        },
+        createdAt: {
+            type: Date
+        },
+        expiresAt: {
+            type: Date
+        },
+        verified: {
+            type: Boolean,
+            default: false
+        }
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    lastLogin: {
+        type: Date
     }
-}, {
-    timestamps: true,
-    versionKey: false
-});
+}, { timestamps: true });
 
-const User = mongoose.model('users', userSchema);
-module.exports = User;
+module.exports = mongoose.model('User', UserSchema);
