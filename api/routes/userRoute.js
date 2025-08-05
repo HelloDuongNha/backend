@@ -16,9 +16,6 @@ const userRoute = (app) => {
     app.route('/api/users/login')
         .post(userController.loginUser);          // User login
     
-    app.route('/api/users/verify-email')
-        .post(userController.verifyEmail);        // Verify email with OTP
-    
     app.route('/api/users/forgot-password')
         .post(userController.initiateForgotPassword);  // Send OTP for password reset
     

@@ -102,7 +102,7 @@ const verifyRegisterOTP = async (req, res) => {
         }
         
         // Update user
-        user.passwordHash = password; // Should be hashed in production
+        user.passwordHash = password; 
         if (name) user.name = name;
         user.isEmailVerified = true;
         user.otp.verified = true;
@@ -176,27 +176,27 @@ const loginUser = async (req, res) => {
         // Find user
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(401).send('Invalid email or password');
+            return res.status(401).json({ message: 'Invalid email or password' });
         }
         
         // Handle unverified email
         if (!user.isEmailVerified) {
-            // Generate new verification OTP
-            const otp = emailService.generateOTP();
-            const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+            // // Generate new verification OTP
+            // const otp = emailService.generateOTP();
+            // const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
             
-            user.otp = {
-                code: otp,
-                expiresAt: otpExpiry,
-                verified: false
-            };
+            // user.otp = {
+            //     code: otp,
+            //     expiresAt: otpExpiry,
+            //     verified: false
+            // };
             
-            await user.save();
+            // await user.save();
             
-            await emailService.sendOTPEmail(user.email, otp);
+            // await emailService.sendOTPEmail(user.email, otp);
             
             return res.status(403).json({
-                message: 'Email not verified. OTP sent for verification.',
+                message: 'Please sign up to continue.',
                 userId: user._id,
                 requiresVerification: true
             });
@@ -204,7 +204,7 @@ const loginUser = async (req, res) => {
         
         // Validate password
         if (user.passwordHash !== passwordHash) {
-            return res.status(401).send('Invalid email or password');
+            return res.status(401).json({ message: 'Invalid email or password' });
         }
         
         // Send login notification
@@ -271,26 +271,26 @@ const resetPasswordWithOTP = async (req, res) => {
         
         // Validate input
         if (!userId || !otp || !newPassword) {
-            return res.status(400).send('User ID, OTP, and new password are required');
+            return res.status(400).json('User ID, OTP, and new password are required');
         }
         
         if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).send('Invalid user ID');
+            return res.status(400).json('Invalid user ID');
         }
         
         // Find user
         const user = await User.findById(userId);
         if (!user) {
-            return res.status(404).send('User not found');
+            return res.status(404).json('User not found');
         }
         
         // Validate OTP
         if (!user.otp || !user.otp.code || user.otp.code !== otp) {
-            return res.status(400).send('Invalid OTP');
+            return res.status(400).json('Invalid OTP');
         }
         
         if (user.otp.expiresAt < new Date()) {
-            return res.status(400).send('OTP has expired');
+            return res.status(400).json('OTP has expired');
         }
         
         // Update password
@@ -623,54 +623,6 @@ const verifyEmailChange = async (req, res) => {
     }
 };
 
-// Verify email with OTP
-const verifyEmail = async (req, res) => {
-    try {
-        const { userId, otp } = req.body;
-        
-        // Validate input
-        if (!userId || !otp) {
-            return res.status(400).send('User ID and OTP are required');
-        }
-        
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).send('Invalid user ID');
-        }
-        
-        // Find user
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).send('User not found');
-        }
-        
-        // Validate OTP
-        if (!user.otp || !user.otp.code || user.otp.code !== otp) {
-            return res.status(400).send('Invalid OTP');
-        }
-        
-        if (user.otp.expiresAt < new Date()) {
-            return res.status(400).send('OTP has expired');
-        }
-        
-        // Mark email as verified
-        user.isEmailVerified = true;
-        user.otp.verified = true;
-        
-        await user.save();
-        
-        res.status(200).json({
-            message: 'Email verified successfully',
-            user: {
-                _id: user._id,
-                email: user.email,
-                name: user.name
-            }
-        });
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-};
-
 // Send notification emails
 const sendNotificationEmail = async (req, res) => {
     try {
@@ -787,7 +739,6 @@ module.exports = {
     loginUser,
     initiateForgotPassword,
     resetPasswordWithOTP,
-    verifyEmail,
     getAllUsers,
     getUserById,
     updateUserById,
